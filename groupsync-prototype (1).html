@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroupSync — Prototype</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1418;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px 16px;
+  }
+
+  /* ── Phone frame ── */
+  .phone {
+    width: 375px;
+    height: 720px;
+    background: #0b141a;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 2px #2a3942;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  /* ── Step nav ── */
+  .step-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #0b141a;
+    border-bottom: 1px solid #1f2c34;
+    flex-shrink: 0;
+  }
+  .logo-row { display: flex; align-items: center; gap: 8px; }
+  .logo-badge {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .brand-name { color: #e9edef; font-size: 14px; font-weight: 700; letter-spacing: 0.3px; }
+  .steps { display: flex; gap: 8px; }
+  .step-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid #2a3942;
+    background: none; cursor: pointer;
+    color: #8696a0; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .step-btn.active {
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    border-color: transparent; color: #fff;
+  }
+  .step-btn.done {
+    border-color: #00cec9;
+    background: rgba(0,206,201,0.1);
+    color: #00cec9;
+  }
+
+  /* ── Screen container ── */
+  .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ── WhatsApp chat header ── */
+  .chat-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px;
+    background: #1f2c34;
+    border-bottom: 0.5px solid #2a3942;
+    flex-shrink: 0;
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 10px; }
+  .group-avatar-stack { position: relative; width: 44px; height: 28px; }
+  .group-avatar-stack .av {
+    position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 8px; font-weight: 700;
+    border: 1px solid #1f2c34;
+  }
+  .chat-header-name { color: #e9edef; font-size: 15px; font-weight: 600; }
+  .chat-header-sub { color: #8696a0; font-size: 12px; }
+  .chat-header-icons { display: flex; gap: 18px; }
+  .icon { color: #8696a0; font-size: 17px; cursor: pointer; }
+
+  /* ── Messages ── */
+  .messages {
+    flex: 1; overflow-y: auto; padding: 8px;
+    background: #0b141a;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 2px; }
+
+  .date-divider {
+    text-align: center; margin: 10px 0;
+  }
+  .date-divider span {
+    background: rgba(17,27,33,0.9); color: #8696a0;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.5px;
+    padding: 3px 12px; border-radius: 8px;
+  }
+
+  .bubble-row { display: flex; margin-bottom: 2px; }
+  .bubble-row.incoming { align-items: flex-end; gap: 6px; max-width: 85%; }
+  .bubble-row.outgoing { justify-content: flex-end; }
+
+  .avatar-sm {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px; font-weight: 700;
+  }
+  .avatar-placeholder { width: 28px; flex-shrink: 0; }
+
+  .bubble {
+    padding: 7px 10px; border-radius: 10px;
+    max-width: 260px; position: relative;
+  }
+  .bubble.incoming {
+    background: #1f2c34; border-top-left-radius: 2px;
+  }
+  .bubble.outgoing {
+    background: #005c4b; border-top-right-radius: 2px; max-width: 280px;
+  }
+  .bubble .sender {
+    font-size: 12px; font-weight: 600; margin-bottom: 2px;
+  }
+  .bubble .text { color: #e9edef; font-size: 14px; line-height: 1.4; }
+  .bubble .time {
+    color: #8696a0; font-size: 10px; margin-top: 3px;
+    text-align: right;
+  }
+
+  /* ── Input bar ── */
+  .input-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 6px;
+    background: #1f2c34;
+    border-top: 0.5px solid #2a3942;
+    flex-shrink: 0;
+  }
+  .input-wrap {
+    flex: 1; display: flex; align-items: center;
+    background: #2a3942; border-radius: 22px;
+    padding: 4px 5px 4px 14px; gap: 8px;
+  }
+  .input-fake {
+    flex: 1; color: #8696a0; font-size: 14px;
+  }
+  .gs-widget {
+    display: flex; align-items: center; gap: 5px;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    border-radius: 18px; padding: 8px 12px;
+    cursor: pointer; border: none; color: #fff;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.2px;
+    transition: opacity 0.2s;
+  }
+  .gs-widget:hover { opacity: 0.9; }
+
+  /* ── Screen 2: AI Panel ── */
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px; background: #0b141a;
+    border-bottom: 1px solid #1f2c34; flex-shrink: 0;
+  }
+  .back-btn {
+    width: 32px; height: 32px; border: none; background: none;
+    cursor: pointer; color: #8696a0; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .panel-header-center { display: flex; align-items: center; gap: 10px; }
+  .bea-badge {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, #6c5ce7, #00cec9);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff;
+  }
+  .panel-header-title { color: #e9edef; font-size: 14px; font-weight: 700; }
+  .panel-header-sub { color: #8696a0; font-size: 12px; }
+
+  .panel-scroll {
+    flex: 1; overflow-y: auto; padding: 0;
+  }
+  .panel-scroll::-webkit-scrollbar { width: 3px; }
+  .panel-scroll::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 2px; }
+
+  .ai-card {
+    margin: 14px;
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(108,92,231,0.3);
+    background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,206,201,0.08));
+    padding: 14px;
+  }
+  .ai-card-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .ai-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: rgba(108,92,231,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .ai-card-title { color: #e9edef; font-size: 13px; font-weight: 700; }
+  .ai-card-sub { color: #8696a0; font-size: 11px; margin-top: 1px; }
+  .ai-badge {
+    background: rgba(108,92,231,0.3); border-radius: 6px;
+    padding: 3px 8px; color: #a29bfe; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.5px; margin-left: auto;
+  }
+
+  .insight-block { margin: 8px 0; }
+  .insight-label {
+    color: #8696a0; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px;
+  }
+  .insight-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .insight-tag {
+    border-radius: 8px; padding: 3px 10px;
+    font-size: 12px; font-weight: 600;
+  }
+  .tag-purple { background: rgba(108,92,231,0.2); color: #a29bfe; }
+  .tag-green { background: rgba(0,184,148,0.2); color: #00b894; }
+  .tag-teal { background: rgba(0,206,201,0.15); color: #00cec9; }
+  .insight-value { color: #e9edef; font-size: 13px; font-weight: 600; }
+  .insight-note { color: #8696a0; font-size: 11px; margin-top: 3px; }
+  .conflict-note { color: #e17055; font-size: 11px; font-weight: 500; margin-top: 3px; }
+
+  .vibe-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .vibe-tag { background: rgba(0,206,201,0.15); border-radius: 8px; padding: 4px 10px; }
+  .vibe-tag span { color: #00cec9; font-size: 12px; font-weight: 500; }
+
+  .divider { height: 1px; background: rgba(42,57,66,0.6); margin: 10px 0; }
+
+  .section { padding: 0 14px; margin-bottom: 18px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .step-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-dot-outline {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1.5px solid #2a3942;
+    display: flex; align-items: center; justify-content: center;
+    color: #8696a0; font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .section-title { color: #e9edef; font-size: 14px; font-weight: 600; }
+
+  .chip-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip {
+    border: 1px solid #2a3942; border-radius: 20px;
+    padding: 6px 12px; background: #1f2c34;
+    color: #e9edef; font-size: 13px; font-weight: 500;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .chip.accent {
+    background: linear-gradient(90deg, rgba(108,92,231,0.25), rgba(0,206,201,0.25));
+    border-color: rgba(108,92,231,0.4); color: #a29bfe; font-weight: 600;
+  }
+  .chip.green { border-color: rgba(0,184,148,0.4); background: rgba(0,184,148,0.12); color: #00b894; }
+  .chip.teal { border-color: rgba(0,206,201,0.4); background: rgba(0,206,201,0.12); color: #00cec9; }
+  .chip.purple { border-color: rgba(108,92,231,0.4); background: rgba(108,92,231,0.12); color: #a29bfe; }
+  .chip.pink { border-color: rgba(253,121,168,0.4); background: rgba(253,121,168,0.12); color: #fd79a8; }
+
+  .panel-footer {
+    padding: 12px 14px 16px; border-top: 1px solid #1f2c34; flex-shrink: 0;
+  }
+  .cta-btn {
+    width: 100%; padding: 14px; border: none; border-radius: 14px;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    color: #fff; font-size: 15px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 8px; transition: opacity 0.2s;
+  }
+  .cta-btn:hover { opacity: 0.9; }
+  .footer-note { color: #8696a0; font-size: 11px; text-align: center; margin-top: 6px; }
+
+  /* ── Screen 3: Poll ── */
+  .poll-card {
+    background: #1f2c34; border-radius: 14px; padding: 14px;
+    border: 1px solid rgba(108,92,231,0.35);
+    margin: 8px 4px;
+  }
+  .gs-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    border-radius: 8px; padding: 3px 8px; margin-bottom: 6px;
+    color: #fff; font-size: 10px; font-weight: 700;
+  }
+  .poll-title { color: #e9edef; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .poll-sub { color: #8696a0; font-size: 11px; margin-bottom: 12px; }
+
+  .poll-option {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px; background: #0b141a; border-radius: 10px;
+    border: 1px solid #2a3942; margin-bottom: 6px; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .poll-option.winning { border-color: rgba(108,92,231,0.5); background: rgba(108,92,231,0.08); }
+  .poll-option.blocked { opacity: 0.5; }
+  .poll-option-left { flex: 1; }
+  .poll-option-label { color: #e9edef; font-size: 13px; font-weight: 600; }
+  .poll-option-label.striked { text-decoration: line-through; color: #8696a0; }
+  .blocked-note { color: #e17055; font-size: 10px; font-weight: 500; margin-top: 2px; }
+  .voters-row { display: flex; gap: -2px; margin-top: 4px; }
+  .voter-av {
+    width: 18px; height: 18px; border-radius: 50%; margin-right: -3px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 7px; font-weight: 700;
+    border: 1.5px solid #1f2c34;
+  }
+
+  .votes-badge {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .votes-badge.filled { background: linear-gradient(90deg, #6c5ce7, #00cec9); color: #fff; }
+  .votes-badge.outline { border: 1.5px solid #2a3942; color: #8696a0; }
+
+  .ai-note {
+    display: flex; align-items: flex-start; gap: 6px;
+    background: rgba(0,206,201,0.1); border-radius: 8px;
+    padding: 8px; margin: 6px 0;
+  }
+  .ai-note span { color: #00cec9; font-size: 12px; font-weight: 500; flex: 1; }
+
+  .progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .progress-bar { flex: 1; height: 4px; background: #2a3942; border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    width: 80%; height: 100%;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+  }
+  .progress-text { color: #8696a0; font-size: 11px; }
+
+  .lock-btn {
+    width: 100%; padding: 11px; border: none; border-radius: 10px;
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    color: #fff; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .lock-btn:hover { opacity: 0.9; }
+
+  /* ── Screen 4: Swipe Cards ── */
+  .swipe-screen {
+    flex: 1; display: flex; flex-direction: column;
+    background: #0b141a; overflow: hidden;
+  }
+  .swipe-top {
+    padding: 12px 14px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .swipe-badge {
+    background: linear-gradient(90deg, #6c5ce7, #00cec9);
+    border-radius: 10px; padding: 4px 10px;
+    color: #fff; font-size: 11px; font-weight: 700;
+  }
+  .swipe-title { color: #e9edef; font-size: 18px; font-weight: 700; text-align: center; margin-top: 2px; }
+  .swipe-center { display: flex; flex-direction: column; align-items: center; }
+
+  .card-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 14px; }
+  .card-dot { width: 6px; height: 6px; border-radius: 3px; background: #2a3942; transition: all 0.3s; }
+  .card-dot.active { width: 20px; background: #6c5ce7; }
+
+  .card-stack {
+    position: relative; width: 295px; height: 330px;
+    margin: 0 auto;
+  }
+  .activity-card {
+    position: absolute; inset: 0;
+    border-radius: 22px; overflow: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    cursor: grab; user-select: none;
+    transition: transform 0.15s;
+  }
+  .activity-card.back {
+    transform: scale(0.95) translateY(10px);
+    z-index: 0;
+  }
+  .activity-card.front { z-index: 1; }
+  .card-category {
+    color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .card-emoji { font-size: 68px; line-height: 1; }
+  .card-title { color: #fff; font-size: 26px; font-weight: 800; text-align: center; }
+  .card-desc {
+    color: rgba(255,255,255,0.85); font-size: 13px; line-height: 1.5;
+    text-align: center; padding: 0 6px;
+  }
+  .card-tag {
+    position: absolute; bottom: 16px; left: 12px; right: 12px;
+    background: rgba(0,0,0,0.45); border-radius: 10px;
+    padding: 8px 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .card-tag-icon { color: #a29bfe; font-size: 10px; }
+  .card-tag-text { color: rgba(255,255,255,0.9); font-size: 11px; font-weight: 500; flex: 1; }
+
+  .like-label, .nope-label {
+    position: absolute; top: 24px;
+    border: 3px solid; border-radius: 8px;
+    padding: 4px 12px; font-size: 26px; font-weight: 900;
+    opacity: 0; transition: opacity 0.15s; z-index: 10;
+    pointer-events: none;
+  }
+  .like-label { left: 16px; color: #00b894; border-color: #00b894; transform: rotate(-15deg); }
+  .nope-label { right: 16px; color: #e17055; border-color: #e17055; transform: rotate(15deg); }
+
+  .swipe-actions {
+    display: flex; justify-content: center; align-items: center;
+    gap: 28px; margin-top: 20px; padding: 0 40px;
+  }
+  .action-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .action-circle {
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; border: none; transition: transform 0.15s, opacity 0.15s;
+  }
+  .action-circle:hover { transform: scale(1.08); }
+  .action-circle:active { transform: scale(0.95); }
+  .nope-circle { width: 52px; height: 52px; border: 2px solid #e17055; background: #1f2c34; font-size: 22px; }
+  .super-circle { width: 60px; height: 60px; background: linear-gradient(90deg, #6c5ce7, #00cec9); font-size: 20px; }
+  .yes-circle { width: 52px; height: 52px; border: 2px solid #00b894; background: #1f2c34; font-size: 20px; }
+  .action-label { color: #8696a0; font-size: 11px; font-weight: 600; }
+  .swipe-hint { color: #8696a0; font-size: 10px; text-align: center; margin-top: 12px; padding: 0 24px; line-height: 1.5; }
+
+  /* ── Screen 5: Final Plan card ── */
+  .plan-card {
+    background: #1f2c34; border-radius: 16px;
+    border: 1px solid rgba(108,92,231,0.35);
+    overflow: hidden; margin: 8px 2px;
+  }
+  .plan-card-header {
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(108,92,231,0.18), rgba(0,206,201,0.10));
+  }
+  .plan-header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .confirmed-badge {
+    background: rgba(0,184,148,0.2); border-radius: 6px;
+    padding: 3px 8px; color: #00b894; font-size: 10px; font-weight: 700;
+  }
+  .restaurant-name { color: #e9edef; font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+  .restaurant-sub { color: #8696a0; font-size: 12px; margin-bottom: 6px; }
+  .meta-row { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .meta-item { display: flex; align-items: center; gap: 4px; color: #8696a0; font-size: 11px; }
+  .rating-badge {
+    background: rgba(255,200,0,0.15); border-radius: 6px;
+    padding: 2px 7px; color: #f9ca24; font-size: 11px; font-weight: 600;
+  }
+
+  .deal-banner { margin: 0 12px 10px; border-radius: 10px; overflow: hidden; }
+  .deal-inner {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(90deg, #00b894, #00cec9);
+  }
+  .deal-emoji { font-size: 18px; }
+  .deal-title { color: #fff; font-size: 12px; font-weight: 700; flex: 1; }
+  .deal-sub { color: rgba(255,255,255,0.8); font-size: 10px; }
+
+  .runner-up {
+    margin: 0 12px 10px; background: #0b141a;
+    border-radius: 10px; padding: 10px;
+    border: 1px solid #2a3942;
+  }
+  .runner-label {
+    color: #8696a0; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .runner-row { display: flex; align-items: center; justify-content: space-between; }
+  .runner-name { color: #e9edef; font-size: 13px; font-weight: 600; }
+  .runner-sub { color: #8696a0; font-size: 11px; }
+  .switch-btn {
+    border: 1px solid #2a3942; border-radius: 8px;
+    padding: 4px 10px; background: none;
+    color: #8696a0; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+
+  .summary-row {
+    display: flex; align-items: center; justify-content: space-around;
+    margin: 0 12px 10px; background: #0b141a; border-radius: 10px;
+    padding: 10px; border: 1px solid #2a3942;
+  }
+  .summary-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .summary-icon { font-size: 15px; }
+  .summary-label { color: #e9edef; font-size: 11px; font-weight: 600; }
+  .summary-sep { width: 1px; height: 28px; background: #2a3942; }
+
+  .voter-row-plan {
+    display: flex; align-items: center; gap: 3px;
+    padding: 0 14px 8px;
+  }
+  .voter-count { color: #00b894; font-size: 12px; font-weight: 600; margin-left: 6px; }
+
+  .cta-row { display: flex; gap: 8px; padding: 0 12px 14px; }
+  .cta-half {
+    flex: 1; padding: 11px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 14px; font-weight: 700; cursor: pointer;
+    border: none; transition: opacity 0.2s;
+  }
+  .cta-half:hover { opacity: 0.9; }
+  .cta-green { background: linear-gradient(90deg, #00b894, #00cec9); color: #fff; }
+  .cta-outline { background: transparent; border: 1.5px solid #00cec9 !important; color: #00cec9; }
+
+  /* Animations */
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .screen.active { animation: slideIn 0.25s ease; }
+
+  /* Swiping animation */
+  @keyframes swipeRight {
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(400px) rotate(15deg); opacity: 0; }
+  }
+  @keyframes swipeLeft {
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(-400px) rotate(-15deg); opacity: 0; }
+  }
+  .swiping-right { animation: swipeRight 0.3s ease forwards; }
+  .swiping-left { animation: swipeLeft 0.3s ease forwards; }
+
+  .screen5-header-sub { color: #00b894; font-size: 12px; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Step Nav -->
+  <div class="step-nav">
+    <div class="logo-row">
+      <div class="logo-badge">GS</div>
+      <span class="brand-name">GroupSync</span>
+    </div>
+    <div class="steps" id="stepsNav">
+      <button class="step-btn active" onclick="goTo(1)">1</button>
+      <button class="step-btn" onclick="goTo(2)">2</button>
+      <button class="step-btn" onclick="goTo(3)">3</button>
+      <button class="step-btn" onclick="goTo(4)">4</button>
+      <button class="step-btn" onclick="goTo(5)">5</button>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━ SCREEN 1: WhatsApp Chat ━━━━━━━━ -->
+  <div class="screen active" id="screen1">
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="group-avatar-stack">
+          <div class="av" style="background:#6c5ce7;left:0;z-index:3">B</div>
+          <div class="av" style="background:#e17055;left:10px;z-index:2">J</div>
+          <div class="av" style="background:#00b894;left:20px;z-index:1">M</div>
+        </div>
+        <div>
+          <div class="chat-header-name">Weekend Crew 🎉</div>
+          <div class="chat-header-sub">Bea, Jay, Mia, Tom, Zoe</div>
+        </div>
+      </div>
+      <div class="chat-header-icons">
+        <span class="icon">📹</span>
+        <span class="icon">📞</span>
+        <span class="icon">⋮</span>
+      </div>
+    </div>
+
+    <div class="messages">
+      <div class="date-divider"><span>TODAY</span></div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#e17055">J</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#e17055">Jay</div>
+          <div class="text">yo what are we doing this weekend? need to actually make plans 😩</div>
+          <div class="time">11:03 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#00b894">M</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#00b894">Mia</div>
+          <div class="text">FINALLY someone said it. I'm free Friday and Sunday</div>
+          <div class="time">11:04 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#0984e3">T</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#0984e3">Tom</div>
+          <div class="text">can't do Saturday, my cousin's visiting. Friday works tho</div>
+          <div class="time">11:06 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row outgoing">
+        <div class="bubble outgoing">
+          <div class="text">Thursday could work for me? We could do dinner somewhere</div>
+          <div class="time">11:08 AM ✓✓</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#e17055">J</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#e17055">Jay</div>
+          <div class="text">Thursday is tough for me, got a thing after work until like 9</div>
+          <div class="time">11:09 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#fd79a8">Z</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#fd79a8">Zoe</div>
+          <div class="text">same, Thursday no good. Friday is perfect tbh</div>
+          <div class="time">11:10 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#00b894">M</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#00b894">Mia</div>
+          <div class="text">budget check — I'm a bit tight this month, hoping nothing too expensive?</div>
+          <div class="time">11:11 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#0984e3">T</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#0984e3">Tom</div>
+          <div class="text">same, maybe like... $30-40 per person max?</div>
+          <div class="time">11:12 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row outgoing">
+        <div class="bubble outgoing">
+          <div class="text">totally, tacos or something casual sounds ideal. or drinks + small plates?</div>
+          <div class="time">11:13 AM ✓✓</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#fd79a8">Z</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#fd79a8">Zoe</div>
+          <div class="text">yes omg, I've been craving Mexican food all week</div>
+          <div class="time">11:14 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#e17055">J</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#e17055">Jay</div>
+          <div class="text">or thai? or we could just do drinks first and see</div>
+          <div class="time">11:15 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#0984e3">T</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#0984e3">Tom</div>
+          <div class="text">someone should just pick lol we never actually decide</div>
+          <div class="time">11:18 AM</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+    </div>
+
+    <div class="input-bar">
+      <span class="icon">🙂</span>
+      <div class="input-wrap">
+        <span class="input-fake">Message</span>
+        <button class="gs-widget" onclick="goTo(2)">✦ Plan</button>
+      </div>
+      <span class="icon">🎤</span>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━ SCREEN 2: AI Planner Panel ━━━━━━━━ -->
+  <div class="screen" id="screen2">
+    <div class="panel-header">
+      <button class="back-btn" onclick="goTo(1)">‹</button>
+      <div class="panel-header-center">
+        <div class="bea-badge">✦</div>
+        <div>
+          <div class="panel-header-title">GroupSync Planner</div>
+          <div class="panel-header-sub">for Weekend Crew 🎉</div>
+        </div>
+      </div>
+      <div style="width:32px"></div>
+    </div>
+
+    <div class="panel-scroll">
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <div class="ai-icon">🤖</div>
+          <div>
+            <div class="ai-card-title">Bea read your chat</div>
+            <div class="ai-card-sub">14 messages · just now</div>
+          </div>
+          <div class="ai-badge">AI</div>
+        </div>
+
+        <div class="insight-block">
+          <div class="insight-label">Dates mentioned</div>
+          <div class="insight-tags">
+            <div class="insight-tag tag-purple">Thursday ✗</div>
+            <div class="insight-tag tag-green">Friday ✓</div>
+            <div class="insight-tag tag-green">Sunday ✓</div>
+          </div>
+          <div class="conflict-note">⚠ Jay unavailable Thursday</div>
+        </div>
+        <div class="divider"></div>
+        <div class="insight-block">
+          <div class="insight-label">Budget signals</div>
+          <div class="insight-value">~$30–40 per person</div>
+          <div class="insight-note">Mia + Tom mentioned budget constraints</div>
+        </div>
+        <div class="divider"></div>
+        <div class="insight-block">
+          <div class="insight-label">Activity cues</div>
+          <div class="insight-value">Food, drinks, casual vibe</div>
+          <div class="insight-note">Mexican food, tacos, small plates mentioned</div>
+        </div>
+        <div class="divider"></div>
+        <div class="insight-block">
+          <div class="insight-label">Vibe check</div>
+          <div class="vibe-row">
+            <div class="vibe-tag"><span>Casual</span></div>
+            <div class="vibe-tag"><span>Social</span></div>
+            <div class="vibe-tag"><span>Budget-friendly</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="step-dot">1</div>
+          <div class="section-title">When — suggested dates</div>
+        </div>
+        <div class="chip-row">
+          <div class="chip accent">Friday Apr 5</div>
+          <div class="chip">Sunday Apr 7</div>
+          <div class="chip">Next Friday</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="step-dot-outline">2</div>
+          <div class="section-title">What — activity categories</div>
+        </div>
+        <div class="chip-row">
+          <div class="chip green">Food</div>
+          <div class="chip teal">Drinks</div>
+          <div class="chip purple">Bar + Bites</div>
+          <div class="chip">Night out</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <div class="step-dot-outline">3</div>
+          <div class="section-title">Preference tags</div>
+        </div>
+        <div class="chip-row">
+          <div class="chip pink">Mexican</div>
+          <div class="chip">Thai</div>
+          <div class="chip pink">Tacos</div>
+          <div class="chip">Small plates</div>
+          <div class="chip green">Budget-friendly</div>
+        </div>
+      </div>
+
+      <div style="height:16px"></div>
+    </div>
+
+    <div class="panel-footer">
+      <button class="cta-btn" onclick="goTo(3)">
+        ↗ Send Availability Poll →
+      </button>
+      <div class="footer-note">Everyone will vote inline — no downloads needed</div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━ SCREEN 3: Availability Poll in Chat ━━━━━━━━ -->
+  <div class="screen" id="screen3">
+    <div class="chat-header">
+      <button class="back-btn" onclick="goTo(2)" style="background:none;border:none;cursor:pointer;color:#8696a0;font-size:22px">‹</button>
+      <div class="chat-header-left">
+        <div class="group-avatar-stack">
+          <div class="av" style="background:#6c5ce7;left:0;z-index:3">B</div>
+          <div class="av" style="background:#e17055;left:10px;z-index:2">J</div>
+          <div class="av" style="background:#00b894;left:20px;z-index:1">M</div>
+        </div>
+        <div>
+          <div class="chat-header-name">Weekend Crew 🎉</div>
+          <div class="chat-header-sub">Bea, Jay, Mia, Tom, Zoe</div>
+        </div>
+      </div>
+      <div class="chat-header-icons">
+        <span class="icon">📹</span>
+        <span class="icon">⋮</span>
+      </div>
+    </div>
+
+    <div class="messages">
+      <div class="bubble-row outgoing">
+        <div class="bubble outgoing">
+          <div class="text">ok I used GroupSync to sort the dates — everyone vote below!</div>
+          <div class="time">11:21 AM ✓✓</div>
+        </div>
+      </div>
+
+      <!-- Poll card inline -->
+      <div class="poll-card">
+        <div class="gs-tag">✦ GroupSync Poll</div>
+        <div class="poll-title">When should we meet?</div>
+        <div class="poll-sub">Tap a date to vote</div>
+
+        <div class="poll-option winning">
+          <div class="poll-option-left">
+            <div class="poll-option-label">Friday, Apr 5</div>
+            <div class="voters-row">
+              <div class="voter-av" style="background:#6c5ce7">B</div>
+              <div class="voter-av" style="background:#00b894">M</div>
+              <div class="voter-av" style="background:#0984e3">T</div>
+              <div class="voter-av" style="background:#fd79a8">Z</div>
+            </div>
+          </div>
+          <div class="votes-badge filled">4</div>
+        </div>
+
+        <div class="poll-option">
+          <div class="poll-option-left">
+            <div class="poll-option-label">Sunday, Apr 7</div>
+            <div class="voters-row">
+              <div class="voter-av" style="background:#00b894">M</div>
+              <div class="voter-av" style="background:#fd79a8">Z</div>
+            </div>
+          </div>
+          <div class="votes-badge outline">2</div>
+        </div>
+
+        <div class="poll-option blocked">
+          <div class="poll-option-left">
+            <div class="poll-option-label striked">Thursday, Apr 4</div>
+            <div class="blocked-note">⚠ Jay unavailable</div>
+          </div>
+          <div class="votes-badge outline" style="opacity:0.4">0</div>
+        </div>
+
+        <div class="ai-note">
+          <span>💡</span>
+          <span>Friday is winning with 4 votes. Lock it in?</span>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill"></div></div>
+          <div class="progress-text">4/5 voted</div>
+        </div>
+
+        <button class="lock-btn" onclick="goTo(4)">Lock in Friday →</button>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#fd79a8">Z</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#fd79a8">Zoe</div>
+          <div class="text">omg this is so much easier 😍 voted Friday!</div>
+          <div class="time">11:23 AM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#0984e3">T</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#0984e3">Tom</div>
+          <div class="text">Friday it is 🙌</div>
+          <div class="time">11:24 AM</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+    </div>
+
+    <div class="input-bar">
+      <span class="icon">🙂</span>
+      <div class="input-wrap">
+        <span class="input-fake">Message</span>
+      </div>
+      <span class="icon">🎤</span>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━ SCREEN 4: Swipe Cards ━━━━━━━━ -->
+  <div class="screen" id="screen4">
+    <div class="swipe-screen">
+      <div class="swipe-top">
+        <button class="back-btn" onclick="goTo(3)" style="background:none;border:none;cursor:pointer;color:#8696a0;font-size:22px">‹</button>
+        <div class="swipe-center">
+          <div class="swipe-badge">Step 2 · What</div>
+          <div class="swipe-title">Pick your vibe</div>
+        </div>
+        <div style="width:32px"></div>
+      </div>
+
+      <div class="card-dots" id="cardDots">
+        <div class="card-dot active"></div>
+        <div class="card-dot"></div>
+        <div class="card-dot"></div>
+        <div class="card-dot"></div>
+      </div>
+
+      <div class="card-stack" id="cardStack">
+        <!-- Back card -->
+        <div class="activity-card back" id="cardBack" style="background: linear-gradient(135deg,#6c5ce7,#a29bfe)">
+          <div class="card-emoji">🍜</div>
+        </div>
+        <!-- Front card -->
+        <div class="activity-card front" id="cardFront" style="background: linear-gradient(135deg,#e17055,#d63031)">
+          <div class="like-label" id="likeLabel">YES</div>
+          <div class="nope-label" id="nopeLabel">NOPE</div>
+          <div class="card-category">Food</div>
+          <div class="card-emoji">🌮</div>
+          <div class="card-title">Mexican &amp; Tacos</div>
+          <div class="card-desc">Fresh, casual, crowd-pleasing. From birria to street tacos, the crew's craving hits all the marks.</div>
+          <div class="card-tag">
+            <span class="card-tag-icon">✦</span>
+            <span class="card-tag-text">Mentioned in chat · Budget-friendly picks ready</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="swipe-actions">
+        <div class="action-btn">
+          <button class="action-circle nope-circle" onclick="swipe('left')">✕</button>
+          <span class="action-label">Nope</span>
+        </div>
+        <div class="action-btn">
+          <button class="action-circle super-circle" onclick="superVote()">★</button>
+          <span class="action-label">Super</span>
+        </div>
+        <div class="action-btn">
+          <button class="action-circle yes-circle" onclick="swipe('right')">♥</button>
+          <span class="action-label">Yes!</span>
+        </div>
+      </div>
+
+      <div class="swipe-hint">Swipe right to vote yes · Swipe left to skip · Star to super vote</div>
+    </div>
+  </div>
+
+  <!-- ━━━━━━━━ SCREEN 5: Final Plan in Chat ━━━━━━━━ -->
+  <div class="screen" id="screen5">
+    <div class="chat-header">
+      <button class="back-btn" onclick="goTo(4)" style="background:none;border:none;cursor:pointer;color:#8696a0;font-size:22px">‹</button>
+      <div class="chat-header-left">
+        <div class="group-avatar-stack">
+          <div class="av" style="background:#6c5ce7;left:0;z-index:3">B</div>
+          <div class="av" style="background:#e17055;left:10px;z-index:2">J</div>
+          <div class="av" style="background:#00b894;left:20px;z-index:1">M</div>
+        </div>
+        <div>
+          <div class="chat-header-name">Weekend Crew 🎉</div>
+          <div class="chat-header-sub screen5-header-sub">Plan confirmed · Friday Apr 5</div>
+        </div>
+      </div>
+      <div class="chat-header-icons">
+        <span class="icon">📹</span>
+        <span class="icon">⋮</span>
+      </div>
+    </div>
+
+    <div class="messages">
+      <div class="bubble-row outgoing">
+        <div class="bubble outgoing">
+          <div class="text">Friday confirmed! Here's the plan 🎉</div>
+          <div class="time">12:04 PM ✓✓</div>
+        </div>
+      </div>
+
+      <!-- Final plan card -->
+      <div class="plan-card">
+        <div class="plan-card-header">
+          <div class="plan-header-top">
+            <div class="gs-tag">✦ GroupSync Plan</div>
+            <div class="confirmed-badge">Confirmed</div>
+          </div>
+          <div class="restaurant-name">Casa Tacos</div>
+          <div class="restaurant-sub">Mexican · Tacos · Casual</div>
+          <div class="meta-row">
+            <div class="meta-item">📍 3 min walk · 124 Mission St</div>
+          </div>
+          <div class="meta-row">
+            <div class="meta-item">🕐 Open until 11pm Fri</div>
+            <div class="rating-badge">⭐ 4.7</div>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div class="deal-banner">
+          <div class="deal-inner">
+            <span class="deal-emoji">🎉</span>
+            <div>
+              <div class="deal-title">Friday Deal: 2-for-1 tacos before 7pm</div>
+              <div class="deal-sub">Ends in 4 hrs · Tap to claim</div>
+            </div>
+            <span style="color:#fff;font-size:14px">›</span>
+          </div>
+        </div>
+
+        <div class="runner-up">
+          <div class="runner-label">Runner-up</div>
+          <div class="runner-row">
+            <div>
+              <div class="runner-name">Thai Palace</div>
+              <div class="runner-sub">Thai · ⭐ 4.5 · 8 min walk</div>
+            </div>
+            <button class="switch-btn">Switch</button>
+          </div>
+        </div>
+
+        <div class="summary-row">
+          <div class="summary-item">
+            <span class="summary-icon">📅</span>
+            <span class="summary-label">Friday, Apr 5</span>
+          </div>
+          <div class="summary-sep"></div>
+          <div class="summary-item">
+            <span class="summary-icon">✨</span>
+            <span class="summary-label">Casual vibes</span>
+          </div>
+          <div class="summary-sep"></div>
+          <div class="summary-item">
+            <span class="summary-icon">💰</span>
+            <span class="summary-label">~$30–40</span>
+          </div>
+        </div>
+
+        <div class="voter-row-plan">
+          <div class="voter-av" style="background:#6c5ce7;width:22px;height:22px;font-size:9px;border:1.5px solid #1f2c34;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">B</div>
+          <div class="voter-av" style="background:#e17055;width:22px;height:22px;font-size:9px;border:1.5px solid #1f2c34;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;margin-left:-4px">J</div>
+          <div class="voter-av" style="background:#00b894;width:22px;height:22px;font-size:9px;border:1.5px solid #1f2c34;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;margin-left:-4px">M</div>
+          <div class="voter-av" style="background:#0984e3;width:22px;height:22px;font-size:9px;border:1.5px solid #1f2c34;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;margin-left:-4px">T</div>
+          <div class="voter-av" style="background:#fd79a8;width:22px;height:22px;font-size:9px;border:1.5px solid #1f2c34;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;margin-left:-4px">Z</div>
+          <span class="voter-count">5/5 in</span>
+        </div>
+
+        <div class="cta-row">
+          <button class="cta-half cta-green">✓ I'm In!</button>
+          <button class="cta-half cta-outline" style="border:1.5px solid #00cec9">↗ Directions</button>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#fd79a8">Z</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#fd79a8">Zoe</div>
+          <div class="text">YASSS Casa Tacos!! and that deal is insane 🌮🌮🌮</div>
+          <div class="time">12:06 PM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#e17055">J</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#e17055">Jay</div>
+          <div class="text">ok I'm actually hyped for this now lol</div>
+          <div class="time">12:07 PM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#0984e3">T</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#0984e3">Tom</div>
+          <div class="text">2 for 1 tacos before 7? we're going at 6:45 sharp</div>
+          <div class="time">12:08 PM</div>
+        </div>
+      </div>
+
+      <div class="bubble-row incoming">
+        <div class="avatar-sm" style="background:#00b894">M</div>
+        <div class="bubble incoming">
+          <div class="sender" style="color:#00b894">Mia</div>
+          <div class="text">this is so much better than deciding for 3 hours 😭 love GroupSync</div>
+          <div class="time">12:09 PM</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+    </div>
+
+    <div class="input-bar">
+      <span class="icon">🙂</span>
+      <div class="input-wrap">
+        <span class="input-fake">Message</span>
+        <button class="gs-widget" onclick="goTo(1)">✦ Plan</button>
+      </div>
+      <span class="icon">🎤</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentScreen = 1;
+
+  function goTo(n) {
+    document.getElementById('screen' + currentScreen).classList.remove('active');
+    currentScreen = n;
+    document.getElementById('screen' + n).classList.add('active');
+    updateSteps();
+  }
+
+  function updateSteps() {
+    const btns = document.querySelectorAll('.step-btn');
+    btns.forEach((b, i) => {
+      b.className = 'step-btn';
+      if (i + 1 === currentScreen) b.classList.add('active');
+      else if (i + 1 < currentScreen) b.classList.add('done');
+    });
+  }
+
+  // ── Swipe card logic ──
+  const CARDS = [
+    {
+      emoji: '🌮', category: 'Food', title: 'Mexican &amp; Tacos',
+      desc: 'Fresh, casual, crowd-pleasing. From birria to street tacos, the crew\'s craving hits all the marks.',
+      tag: 'Mentioned in chat · Budget-friendly picks ready',
+      grad: 'linear-gradient(135deg,#e17055,#d63031)',
+      backGrad: 'linear-gradient(135deg,#6c5ce7,#a29bfe)', backEmoji: '🍜'
+    },
+    {
+      emoji: '🍜', category: 'Food', title: 'Thai &amp; Asian',
+      desc: 'Bold flavors, shareable dishes, great value. Perfect for groups who like exploring the menu together.',
+      tag: 'Chat signal: Jay suggested · 3 places nearby',
+      grad: 'linear-gradient(135deg,#6c5ce7,#a29bfe)',
+      backGrad: 'linear-gradient(135deg,#00cec9,#00b894)', backEmoji: '🍸'
+    },
+    {
+      emoji: '🍸', category: 'Drinks + Bites', title: 'Bar &amp; Small Plates',
+      desc: 'Order a little of everything. Low pressure, high vibes. Natural stopping point if the night gets long.',
+      tag: 'Budget match: $25–35/person avg',
+      grad: 'linear-gradient(135deg,#00cec9,#00b894)',
+      backGrad: 'linear-gradient(135deg,#fd79a8,#e84393)', backEmoji: '🍕'
+    },
+    {
+      emoji: '🍕', category: 'Food', title: 'Pizza &amp; Craft Beer',
+      desc: 'Laid-back and delicious. Shareable pies, good beer selection, always a safe crowd-pleaser.',
+      tag: 'High match: casual + budget-friendly',
+      grad: 'linear-gradient(135deg,#fd79a8,#e84393)',
+      backGrad: 'linear-gradient(135deg,#6c5ce7,#a29bfe)', backEmoji: '🌮'
+    }
+  ];
+
+  let cardIndex = 0;
+
+  function renderCard() {
+    const card = CARDS[cardIndex];
+    const front = document.getElementById('cardFront');
+    const back = document.getElementById('cardBack');
+    const dots = document.querySelectorAll('.card-dot');
+
+    front.style.background = card.grad;
+    front.innerHTML = `
+      <div class="like-label" id="likeLabel">YES</div>
+      <div class="nope-label" id="nopeLabel">NOPE</div>
+      <div class="card-category">${card.category}</div>
+      <div class="card-emoji">${card.emoji}</div>
+      <div class="card-title">${card.title}</div>
+      <div class="card-desc">${card.desc}</div>
+      <div class="card-tag">
+        <span class="card-tag-icon">✦</span>
+        <span class="card-tag-text">${card.tag}</span>
+      </div>
+    `;
+
+    const next = CARDS[Math.min(cardIndex + 1, CARDS.length - 1)];
+    back.style.background = next.grad;
+    back.innerHTML = `<div class="card-emoji">${next.emoji}</div>`;
+
+    dots.forEach((d, i) => {
+      d.className = 'card-dot' + (i === cardIndex ? ' active' : '');
+    });
+  }
+
+  function swipe(dir) {
+    const front = document.getElementById('cardFront');
+    front.classList.add(dir === 'right' ? 'swiping-right' : 'swiping-left');
+
+    setTimeout(() => {
+      front.classList.remove('swiping-right', 'swiping-left');
+      if (dir === 'right' && cardIndex >= CARDS.length - 1) {
+        goTo(5);
+        return;
+      }
+      cardIndex = Math.min(cardIndex + 1, CARDS.length - 1);
+      renderCard();
+    }, 310);
+  }
+
+  function superVote() {
+    swipe('right');
+  }
+
+  // Touch/drag swipe on card
+  (function() {
+    let startX = 0;
+    let dragging = false;
+    const front = () => document.getElementById('cardFront');
+
+    function getX(e) {
+      return e.touches ? e.touches[0].clientX : e.clientX;
+    }
+
+    document.addEventListener('mousedown', e => {
+      if (front().contains(e.target)) { startX = getX(e); dragging = true; }
+    });
+    document.addEventListener('touchstart', e => {
+      if (front().contains(e.target)) { startX = getX(e); dragging = true; }
+    }, { passive: true });
+
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dx = getX(e) - startX;
+      front().style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`;
+      const ll = document.getElementById('likeLabel');
+      const nl = document.getElementById('nopeLabel');
+      if (ll) ll.style.opacity = Math.max(0, dx / 80);
+      if (nl) nl.style.opacity = Math.max(0, -dx / 80);
+    });
+    document.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dx = getX(e) - startX;
+      front().style.transform = `translateX(${dx}px) rotate(${dx * 0.05}deg)`;
+    }, { passive: true });
+
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      const dx = getX(e) - startX;
+      front().style.transform = '';
+      const ll = document.getElementById('likeLabel');
+      const nl = document.getElementById('nopeLabel');
+      if (ll) ll.style.opacity = 0;
+      if (nl) nl.style.opacity = 0;
+      if (dx > 70) swipe('right');
+      else if (dx < -70) swipe('left');
+    }
+    document.addEventListener('mouseup', endDrag);
+    document.addEventListener('touchend', endDrag);
+  })();
+</script>
+</body>
+</html>
