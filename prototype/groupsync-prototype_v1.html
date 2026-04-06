@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroupSync — Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --whatsapp-bg: #0b141a;
+    --whatsapp-chat-bg: #0b141a;
+    --whatsapp-header: #1f2c34;
+    --whatsapp-input: #1f2c34;
+    --whatsapp-green: #00a884;
+    --whatsapp-green-light: #005c4b;
+    --whatsapp-bubble-out: #005c4b;
+    --whatsapp-bubble-in: #1f2c34;
+    --whatsapp-text: #e9edef;
+    --whatsapp-text-muted: #8696a0;
+    --whatsapp-border: #2a3942;
+    
+    --gs-primary: #6c5ce7;
+    --gs-primary-light: #a29bfe;
+    --gs-accent: #00cec9;
+    --gs-accent-warm: #fdcb6e;
+    --gs-danger: #ff6b6b;
+    --gs-success: #00b894;
+    --gs-bg-dark: #0f0a1a;
+    --gs-bg-card: #1a1230;
+    --gs-bg-card-hover: #231a3d;
+    --gs-text: #f0eef5;
+    --gs-text-muted: #9890b0;
+    --gs-gradient: linear-gradient(135deg, #6c5ce7, #00cec9);
+    --gs-gradient-warm: linear-gradient(135deg, #fdcb6e, #e17055);
+    
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #050510;
+    color: var(--gs-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  .prototype-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .nav-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    background: rgba(108, 92, 231, 0.05);
+    color: var(--gs-text-muted);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+  }
+  .nav-step:hover {
+    border-color: rgba(108, 92, 231, 0.4);
+    background: rgba(108, 92, 231, 0.1);
+  }
+  .nav-step.active {
+    background: var(--gs-primary);
+    border-color: var(--gs-primary);
+    color: white;
+    font-weight: 600;
+  }
+  .nav-step .step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .nav-step.active .step-num {
+    background: rgba(255,255,255,0.25);
+  }
+  .nav-connector {
+    color: rgba(108, 92, 231, 0.3);
+    font-size: 18px;
+  }
+
+  /* ---- PHONE FRAME ---- */
+  .phone-frame {
+    width: 375px;
+    height: 720px;
+    border-radius: 40px;
+    border: 3px solid #2a2a3a;
+    overflow: hidden;
+    position: relative;
+    background: var(--whatsapp-bg);
+    box-shadow: 
+      0 0 0 1px rgba(108, 92, 231, 0.1),
+      0 25px 80px rgba(0,0,0,0.6),
+      0 0 120px rgba(108, 92, 231, 0.08);
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    animation: screenIn 0.35s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes screenIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ---- SCREEN 1: WHATSAPP CHAT ---- */
+  .wa-header {
+    background: var(--whatsapp-header);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .wa-header .back-arrow { color: var(--whatsapp-text-muted); font-size: 20px; }
+  .wa-avatar-group {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--gs-gradient);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: white;
+  }
+  .wa-header-info { flex: 1; }
+  .wa-header-info .name { font-size: 16px; font-weight: 600; color: var(--whatsapp-text); }
+  .wa-header-info .status { font-size: 12px; color: var(--whatsapp-text-muted); }
+  .wa-header-icons { display: flex; gap: 20px; color: var(--whatsapp-text-muted); font-size: 18px; }
+
+  .wa-chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--whatsapp-chat-bg);
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L35 15 L30 12 L25 15 Z' fill='rgba(255,255,255,0.012)'/%3E%3Ccircle cx='10' cy='40' r='2' fill='rgba(255,255,255,0.008)'/%3E%3Ccircle cx='50' cy='30' r='1.5' fill='rgba(255,255,255,0.008)'/%3E%3C/svg%3E");
+  }
+  .wa-chat-area::-webkit-scrollbar { width: 4px; }
+  .wa-chat-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .msg {
+    max-width: 80%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.45;
+    position: relative;
+    color: var(--whatsapp-text);
+  }
+  .msg .sender {
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .msg .time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    float: right;
+    margin-left: 8px;
+    margin-top: 4px;
+  }
+  .msg-in {
+    background: var(--whatsapp-bubble-in);
+    align-self: flex-start;
+    border-top-left-radius: 3px;
+  }
+  .msg-out {
+    background: var(--whatsapp-bubble-out);
+    align-self: flex-end;
+    border-top-right-radius: 3px;
+  }
+  .msg-in .sender.s1 { color: #53bdeb; }
+  .msg-in .sender.s2 { color: #e9a0ff; }
+  .msg-in .sender.s3 { color: #ffb74d; }
+  .msg-out .sender { color: #8cdfb0; }
+
+  .wa-input-area {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--whatsapp-bg);
+  }
+  .wa-input-bar {
+    flex: 1;
+    background: var(--whatsapp-input);
+    border-radius: 24px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--whatsapp-text-muted);
+    font-size: 15px;
+  }
+  .wa-input-bar .gs-widget-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--gs-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .wa-input-bar .gs-widget-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 16px rgba(108, 92, 231, 0.5);
+  }
+  .wa-input-bar .gs-widget-btn svg { width: 16px; height: 16px; }
+  .gs-widget-tooltip {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gs-primary);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 16px rgba(108, 92, 231, 0.4);
+  }
+  .gs-widget-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--gs-primary);
+  }
+  .gs-widget-btn:hover .gs-widget-tooltip { opacity: 1; }
+
+  .wa-send-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--whatsapp-green);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ---- SCREEN 2: PLANNER PANEL ---- */
+  .gs-panel {
+    background: var(--gs-bg-dark);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .gs-panel-header {
+    padding: 16px 20px 12px;
+    background: linear-gradient(180deg, rgba(108,92,231,0.15), transparent);
+    border-bottom: 1px solid rgba(108,92,231,0.1);
+  }
+  .gs-panel-header .top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .gs-panel-header .back-btn {
+    color: var(--gs-primary-light);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .gs-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    background: var(--gs-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .gs-panel-header .group-tag {
+    font-size: 12px;
+    color: var(--gs-text-muted);
+    background: rgba(108,92,231,0.1);
+    padding: 4px 10px;
+    border-radius: 100px;
+    display: inline-block;
+  }
+
+  .ai-context-card {
+    margin: 16px 16px 8px;
+    padding: 14px;
+    background: rgba(108, 92, 231, 0.08);
+    border: 1px solid rgba(108, 92, 231, 0.15);
+    border-radius: var(--radius);
+  }
+  .ai-context-card .ai-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--gs-accent);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ai-context-card .ai-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gs-accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .ai-insight {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--gs-text);
+    line-height: 1.4;
+  }
+  .ai-insight:last-child { margin-bottom: 0; }
+  .ai-insight .icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  .gs-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 16px;
+  }
+  .gs-panel-body::-webkit-scrollbar { width: 4px; }
+  .gs-panel-body::-webkit-scrollbar-thumb { background: rgba(108,92,231,0.2); border-radius: 4px; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--gs-text-muted);
+    margin: 16px 0 10px;
+  }
+
+  .date-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .date-chip {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(108,92,231,0.2);
+    background: rgba(108,92,231,0.06);
+    font-size: 13px;
+    color: var(--gs-text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .date-chip:hover { border-color: var(--gs-primary); background: rgba(108,92,231,0.12); }
+  .date-chip.suggested {
+    border-color: var(--gs-accent);
+    background: rgba(0, 206, 201, 0.1);
+  }
+  .date-chip.suggested::after {
+    content: ' ✦ AI';
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--gs-accent);
+    margin-left: 4px;
+  }
+
+  .gs-launch-btn {
+    margin: 16px 16px 20px;
+    padding: 16px;
+    border-radius: var(--radius);
+    background: var(--gs-gradient);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .gs-launch-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 30px rgba(108, 92, 231, 0.35);
+  }
+
+  /* ---- SCREEN 3: AVAILABILITY POLL IN CHAT ---- */
+  .poll-card {
+    background: var(--whatsapp-bubble-in);
+    border-radius: 10px;
+    padding: 0;
+    max-width: 85%;
+    align-self: flex-start;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .poll-card-header {
+    padding: 10px 14px 8px;
+    background: linear-gradient(135deg, rgba(108,92,231,0.25), rgba(0,206,201,0.15));
+    border-bottom: 1px solid rgba(108,92,231,0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .poll-card-header .gs-icon {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--gs-gradient);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+  }
+  .poll-card-header span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gs-primary-light);
+  }
+  .poll-card-body { padding: 12px 14px; }
+  .poll-card-body .poll-q {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--whatsapp-text);
+    margin-bottom: 10px;
+  }
+  .poll-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: var(--radius-sm);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .poll-option:hover {
+    background: rgba(108,92,231,0.1);
+    border-color: rgba(108,92,231,0.2);
+  }
+  .poll-option.voted {
+    background: rgba(0, 206, 201, 0.1);
+    border-color: rgba(0, 206, 201, 0.3);
+  }
+  .poll-option .day { font-size: 14px; color: var(--whatsapp-text); }
+  .poll-option .votes {
+    font-size: 11px;
+    color: var(--gs-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .poll-option .votes .avatars {
+    display: flex;
+  }
+  .poll-option .votes .mini-av {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    margin-left: -5px;
+    border: 1.5px solid var(--whatsapp-bubble-in);
+    font-size: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+  }
+  .poll-option .votes .mini-av:first-child { margin-left: 0; }
+  .av-bea { background: #6c5ce7; color: white; }
+  .av-mia { background: #e17055; color: white; }
+  .av-dan { background: #00cec9; color: white; }
+  .av-jay { background: #fdcb6e; color: #333; }
+  .av-sam { background: #ff6b6b; color: white; }
+
+  .poll-ai-note {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: rgba(0, 206, 201, 0.08);
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    color: var(--gs-accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ---- SCREEN 4: SWIPE VOTE ---- */
+  .swipe-screen {
+    background: var(--gs-bg-dark);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .swipe-header {
+    padding: 16px 20px;
+    text-align: center;
+    background: linear-gradient(180deg, rgba(108,92,231,0.12), transparent);
+  }
+  .swipe-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .swipe-header p {
+    font-size: 13px;
+    color: var(--gs-text-muted);
+  }
+  .swipe-progress {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .swipe-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(108,92,231,0.2);
+  }
+  .swipe-dot.done { background: var(--gs-primary); }
+  .swipe-dot.current {
+    background: var(--gs-primary);
+    width: 24px;
+    border-radius: 4px;
+  }
+
+  .swipe-card-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+  }
+  .swipe-card {
+    width: 100%;
+    max-width: 300px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .swipe-card-bg {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    position: relative;
+  }
+  .swipe-card-bg.food { background: linear-gradient(135deg, #e17055, #fdcb6e); }
+  .swipe-card-bg.movies { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+  .swipe-card-bg.adventure { background: linear-gradient(135deg, #00cec9, #55efc4); }
+  .swipe-card-bg.nightlife { background: linear-gradient(135deg, #fd79a8, #e84393); }
+
+  .swipe-card-info {
+    padding: 20px;
+    background: var(--gs-bg-card);
+  }
+  .swipe-card-info h4 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .swipe-card-info p { font-size: 13px; color: var(--gs-text-muted); line-height: 1.5; }
+  .swipe-card-info .ai-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: rgba(0,206,201,0.1);
+    border: 1px solid rgba(0,206,201,0.2);
+    font-size: 11px;
+    color: var(--gs-accent);
+    font-weight: 600;
+  }
+
+  .swipe-actions {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 20px 24px;
+  }
+  .swipe-btn {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid;
+  }
+  .swipe-btn.nope {
+    border-color: rgba(255,107,107,0.3);
+    background: rgba(255,107,107,0.08);
+    color: var(--gs-danger);
+  }
+  .swipe-btn.nope:hover {
+    background: rgba(255,107,107,0.15);
+    transform: scale(1.1);
+  }
+  .swipe-btn.yep {
+    border-color: rgba(0,184,148,0.3);
+    background: rgba(0,184,148,0.08);
+    color: var(--gs-success);
+  }
+  .swipe-btn.yep:hover {
+    background: rgba(0,184,148,0.15);
+    transform: scale(1.1);
+  }
+  .swipe-btn.super {
+    border-color: rgba(108,92,231,0.3);
+    background: rgba(108,92,231,0.08);
+    color: var(--gs-primary-light);
+    width: 50px; height: 50px;
+    font-size: 20px;
+    align-self: center;
+  }
+
+  /* Stacked cards behind */
+  .swipe-card-stack {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+  }
+  .swipe-card-stack .swipe-card { position: relative; z-index: 3; }
+  .swipe-card-stack::before,
+  .swipe-card-stack::after {
+    content: '';
+    position: absolute;
+    border-radius: var(--radius-lg);
+    background: var(--gs-bg-card);
+    border: 1px solid rgba(108,92,231,0.1);
+  }
+  .swipe-card-stack::before {
+    inset: 8px 8px -6px;
+    z-index: 2;
+    opacity: 0.6;
+  }
+  .swipe-card-stack::after {
+    inset: 16px 16px -12px;
+    z-index: 1;
+    opacity: 0.3;
+  }
+
+  /* ---- SCREEN 5: FINAL PLAN ---- */
+  .plan-msg {
+    max-width: 88%;
+    align-self: flex-start;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 4px;
+    background: var(--whatsapp-bubble-in);
+  }
+  .plan-msg-header {
+    padding: 12px 14px 10px;
+    background: linear-gradient(135deg, rgba(108,92,231,0.3), rgba(0,206,201,0.15));
+    display: flex; align-items: center; gap: 10px;
+  }
+  .plan-msg-header .gs-badge {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    background: var(--gs-gradient);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .plan-msg-header .info h4 {
+    font-size: 14px; font-weight: 700; color: white;
+  }
+  .plan-msg-header .info span {
+    font-size: 11px; color: var(--gs-primary-light);
+  }
+  .plan-msg-body { padding: 14px; }
+  .plan-venue {
+    padding: 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .plan-venue .venue-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--whatsapp-text);
+    margin-bottom: 3px;
+  }
+  .plan-venue .venue-detail {
+    font-size: 12px;
+    color: var(--gs-text-muted);
+    margin-bottom: 2px;
+  }
+  .plan-venue .venue-rating {
+    font-size: 12px;
+    color: var(--gs-accent-warm);
+    margin-top: 4px;
+  }
+  .deal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+  .deal-badge.hot {
+    background: rgba(253, 203, 110, 0.12);
+    border: 1px solid rgba(253, 203, 110, 0.25);
+    color: var(--gs-accent-warm);
+  }
+  .deal-badge.save {
+    background: rgba(0, 184, 148, 0.1);
+    border: 1px solid rgba(0, 184, 148, 0.25);
+    color: var(--gs-success);
+  }
+
+  .plan-details-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .plan-detail-item {
+    flex: 1;
+    padding: 10px;
+    background: rgba(108,92,231,0.06);
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+  .plan-detail-item .label { font-size: 10px; color: var(--gs-text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .plan-detail-item .value { font-size: 14px; font-weight: 700; color: var(--whatsapp-text); margin-top: 2px; }
+
+  .plan-cta {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .plan-cta-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .plan-cta-btn.primary {
+    background: var(--gs-gradient);
+    color: white;
+  }
+  .plan-cta-btn.secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--whatsapp-text);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ---- SCREEN LABEL OVERLAY ---- */
+  .screen-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 12px;
+    background: rgba(108,92,231,0.9);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ---- BOTTOM LABEL ---- */
+  .prototype-label {
+    margin-top: 20px;
+    text-align: center;
+    color: var(--gs-text-muted);
+    font-size: 12px;
+  }
+  .prototype-label .brand {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    background: var(--gs-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 14px;
+  }
+
+  /* ---- responsive ---- */
+  @media (max-width: 420px) {
+    .phone-frame { width: 100%; height: 680px; border-radius: 30px; }
+    .nav-step { padding: 6px 10px; font-size: 11px; }
+    .nav-connector { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <div class="prototype-nav">
+    <div class="nav-step active" onclick="goScreen(1)"><span class="step-num">1</span> Chat</div>
+    <span class="nav-connector">→</span>
+    <div class="nav-step" onclick="goScreen(2)"><span class="step-num">2</span> AI Panel</div>
+    <span class="nav-connector">→</span>
+    <div class="nav-step" onclick="goScreen(3)"><span class="step-num">3</span> When</div>
+    <span class="nav-connector">→</span>
+    <div class="nav-step" onclick="goScreen(4)"><span class="step-num">4</span> What</div>
+    <span class="nav-connector">→</span>
+    <div class="nav-step" onclick="goScreen(5)"><span class="step-num">5</span> Where</div>
+  </div>
+
+  <!-- PHONE -->
+  <div class="phone-frame">
+
+    <!-- SCREEN 1: WhatsApp Chat -->
+    <div class="screen active" id="screen1">
+      <div class="screen-label">Screen 1 — Group Chat (Bea's View)</div>
+      <div style="height: 28px;"></div>
+      <div class="wa-header">
+        <span class="back-arrow">‹</span>
+        <div class="avatar-group">
+          <div class="wa-avatar-group">🎯</div>
+        </div>
+        <div class="wa-header-info">
+          <div class="name">The Crew 🔥</div>
+          <div class="status">Mia, Dan, Jay, Sam, You</div>
+        </div>
+        <div class="wa-header-icons">
+          <span>📞</span>
+          <span>⋮</span>
+        </div>
+      </div>
+
+      <div class="wa-chat-area">
+        <div class="msg msg-in">
+          <span class="sender s1">Mia</span>
+          yo we should do something this week, I'm going crazy
+          <span class="time">2:14 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s2">Dan</span>
+          yesss I'm down. thursday?
+          <span class="time">2:15 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s3">Jay</span>
+          can't do thursday 😩 what about friday or saturday?
+          <span class="time">2:16 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s1">Mia</span>
+          friday works!! what should we do tho
+          <span class="time">2:16 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s2">Dan</span>
+          idk food? drinks? I'm kinda broke tho lol
+          <span class="time">2:17 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s3">Jay</span>
+          same honestly. somewhere not too pricey
+          <span class="time">2:17 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s1">Mia</span>
+          bea just pick something pls 😂😂
+          <span class="time">2:18 PM</span>
+        </div>
+        <div class="msg msg-out">
+          <span class="sender">Bea (You)</span>
+          say less 😏
+          <span class="time">2:18 PM</span>
+        </div>
+      </div>
+
+      <div class="wa-input-area">
+        <div class="wa-input-bar">
+          <span>😊</span>
+          <span style="flex:1; opacity:0.5;">Message</span>
+          <div class="gs-widget-btn" onclick="goScreen(2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <div class="gs-widget-tooltip">Launch GroupSync ✦</div>
+          </div>
+          <span>📎</span>
+        </div>
+        <div class="wa-send-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: Planner Panel -->
+    <div class="screen" id="screen2">
+      <div class="screen-label">Screen 2 — AI Planner Panel (Bea Only)</div>
+      <div style="height: 28px;"></div>
+      <div class="gs-panel">
+        <div class="gs-panel-header">
+          <div class="top-row">
+            <div class="back-btn" onclick="goScreen(1)">‹ Chat</div>
+            <div class="gs-logo">GroupSync</div>
+            <div style="width: 40px;"></div>
+          </div>
+          <div class="group-tag">📍 The Crew 🔥 · 5 members</div>
+        </div>
+
+        <div class="ai-context-card">
+          <div class="ai-label"><span class="dot"></span> AI read your chat</div>
+          <div class="ai-insight">
+            <span class="icon">📅</span>
+            <span><strong>Dates mentioned:</strong> Thursday (Jay can't), Friday (3 votes), Saturday</span>
+          </div>
+          <div class="ai-insight">
+            <span class="icon">💸</span>
+            <span><strong>Budget signal:</strong> Dan + Jay flagged budget constraints</span>
+          </div>
+          <div class="ai-insight">
+            <span class="icon">🍽️</span>
+            <span><strong>Activity cues:</strong> "food" and "drinks" mentioned</span>
+          </div>
+          <div class="ai-insight">
+            <span class="icon">🔥</span>
+            <span><strong>Vibe check:</strong> High energy, everyone's eager to go out</span>
+          </div>
+        </div>
+
+        <div class="gs-panel-body">
+          <div class="section-label">Suggested dates</div>
+          <div class="date-chips">
+            <div class="date-chip suggested">Fri, Apr 4</div>
+            <div class="date-chip">Sat, Apr 5</div>
+            <div class="date-chip" style="opacity:0.4; text-decoration: line-through;">Thu, Apr 3</div>
+          </div>
+
+          <div class="section-label">Activity categories to include</div>
+          <div class="date-chips">
+            <div class="date-chip suggested">🍽️ Food</div>
+            <div class="date-chip suggested">🍹 Drinks</div>
+            <div class="date-chip">🎬 Movies</div>
+            <div class="date-chip">🎯 Adventure</div>
+            <div class="date-chip">🎶 Nightlife</div>
+          </div>
+
+          <div class="section-label">Preferences noted</div>
+          <div class="date-chips">
+            <div class="date-chip">💰 Budget-friendly</div>
+            <div class="date-chip">📍 Open to anywhere</div>
+          </div>
+        </div>
+
+        <button class="gs-launch-btn" onclick="goScreen(3)">Send Availability Poll →</button>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: Availability Poll in Chat -->
+    <div class="screen" id="screen3">
+      <div class="screen-label">Screen 3 — Availability Poll (Group View)</div>
+      <div style="height: 28px;"></div>
+      <div class="wa-header">
+        <span class="back-arrow">‹</span>
+        <div class="avatar-group">
+          <div class="wa-avatar-group">🎯</div>
+        </div>
+        <div class="wa-header-info">
+          <div class="name">The Crew 🔥</div>
+          <div class="status">Mia, Dan, Jay, Sam, You</div>
+        </div>
+        <div class="wa-header-icons">
+          <span>📞</span>
+          <span>⋮</span>
+        </div>
+      </div>
+
+      <div class="wa-chat-area">
+        <div class="msg msg-out" style="margin-bottom: 8px;">
+          <span class="sender">Bea (You)</span>
+          say less 😏
+          <span class="time">2:18 PM</span>
+        </div>
+
+        <div class="poll-card">
+          <div class="poll-card-header">
+            <div class="gs-icon">⚡</div>
+            <span>GroupSync Poll</span>
+          </div>
+          <div class="poll-card-body">
+            <div class="poll-q">📅 When works for everyone?</div>
+            
+            <div class="poll-option voted">
+              <span class="day">Friday, Apr 4</span>
+              <div class="votes">
+                <div class="avatars">
+                  <div class="mini-av av-bea">B</div>
+                  <div class="mini-av av-mia">M</div>
+                  <div class="mini-av av-dan">D</div>
+                  <div class="mini-av av-jay">J</div>
+                </div>
+                <span>4</span>
+              </div>
+            </div>
+            <div class="poll-option">
+              <span class="day">Saturday, Apr 5</span>
+              <div class="votes">
+                <div class="avatars">
+                  <div class="mini-av av-bea">B</div>
+                  <div class="mini-av av-sam">S</div>
+                </div>
+                <span>2</span>
+              </div>
+            </div>
+            <div class="poll-option" style="opacity:0.45;">
+              <span class="day" style="text-decoration: line-through;">Thursday, Apr 3</span>
+              <div class="votes">
+                <span style="font-size:11px; color: var(--gs-text-muted);">Jay unavailable</span>
+              </div>
+            </div>
+
+            <div class="poll-ai-note">
+              ✦ Friday's winning — AI suggests locking it in
+            </div>
+          </div>
+        </div>
+
+        <div class="msg msg-in" style="margin-top: 6px;">
+          <span class="sender s1">Mia</span>
+          ok this is sick 😍
+          <span class="time">2:22 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s3">Jay</span>
+          FRIDAY LFG
+          <span class="time">2:22 PM</span>
+        </div>
+      </div>
+
+      <div class="wa-input-area">
+        <div class="wa-input-bar">
+          <span>😊</span>
+          <span style="flex:1; opacity:0.5;">Message</span>
+          <div class="gs-widget-btn" onclick="goScreen(4)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            <div class="gs-widget-tooltip">Next: Vote on activity ✦</div>
+          </div>
+          <span>📎</span>
+        </div>
+        <div class="wa-send-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: Swipe Vote -->
+    <div class="screen" id="screen4">
+      <div class="screen-label">Screen 4 — Activity Vote (Swipe Cards)</div>
+      <div style="height: 28px;"></div>
+      <div class="swipe-screen">
+        <div class="swipe-header">
+          <h3>What are we doing? 🎉</h3>
+          <p>Friday, Apr 4 · The Crew</p>
+          <div class="swipe-progress">
+            <div class="swipe-dot done"></div>
+            <div class="swipe-dot current"></div>
+            <div class="swipe-dot"></div>
+            <div class="swipe-dot"></div>
+          </div>
+        </div>
+
+        <div class="swipe-card-area">
+          <div class="swipe-card-stack">
+            <div class="swipe-card">
+              <div class="swipe-card-bg food">🍽️</div>
+              <div class="swipe-card-info">
+                <h4>Food</h4>
+                <p>Hit up a restaurant, try somewhere new, or do a group food crawl</p>
+                <div class="ai-tag">✦ Mentioned in chat · Budget-friendly picks ready</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="swipe-actions">
+          <div class="swipe-btn nope">✕</div>
+          <div class="swipe-btn super">⭐</div>
+          <div class="swipe-btn yep" onclick="goScreen(5)">♥</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 5: Final Plan with Deals -->
+    <div class="screen" id="screen5">
+      <div class="screen-label">Screen 5 — Plan + Deals (In Chat)</div>
+      <div style="height: 28px;"></div>
+      <div class="wa-header">
+        <span class="back-arrow">‹</span>
+        <div class="avatar-group">
+          <div class="wa-avatar-group">🎯</div>
+        </div>
+        <div class="wa-header-info">
+          <div class="name">The Crew 🔥</div>
+          <div class="status">Mia, Dan, Jay, Sam, You</div>
+        </div>
+        <div class="wa-header-icons">
+          <span>📞</span>
+          <span>⋮</span>
+        </div>
+      </div>
+
+      <div class="wa-chat-area">
+        <div class="msg msg-in" style="margin-bottom: 6px;">
+          <span class="sender s2">Dan</span>
+          food won btw 🍕
+          <span class="time">2:30 PM</span>
+        </div>
+
+        <div class="plan-msg">
+          <div class="plan-msg-header">
+            <div class="gs-badge">⚡</div>
+            <div class="info">
+              <h4>Plan locked! 🎉</h4>
+              <span>GroupSync · Friday, Apr 4</span>
+            </div>
+          </div>
+          <div class="plan-msg-body">
+            <div class="plan-venue">
+              <div class="venue-name">🏆 La Placita Taqueria</div>
+              <div class="venue-detail">📍 142 Giralda Ave, Coral Gables</div>
+              <div class="venue-detail">🕗 Fri 6:00 PM – 11:00 PM</div>
+              <div class="venue-rating">⭐ 4.6 · $$ · Mexican · "Best tacos in the Gables"</div>
+              <div class="deal-badge hot">🔥 Friday Deal: 2-for-1 tacos before 7pm</div>
+            </div>
+
+            <div class="plan-venue" style="opacity: 0.75;">
+              <div class="venue-name">🥈 Kush Wynwood</div>
+              <div class="venue-detail">📍 2003 N Miami Ave, Wynwood</div>
+              <div class="venue-rating">⭐ 4.4 · $$ · American · Burgers & craft beer</div>
+              <div class="deal-badge save">💰 Happy hour til 7 — $6 drafts</div>
+            </div>
+
+            <div class="plan-details-row">
+              <div class="plan-detail-item">
+                <div class="label">Day</div>
+                <div class="value">Friday</div>
+              </div>
+              <div class="plan-detail-item">
+                <div class="label">Vibe</div>
+                <div class="value">🍽️ Food</div>
+              </div>
+              <div class="plan-detail-item">
+                <div class="label">Budget</div>
+                <div class="value">$$</div>
+              </div>
+            </div>
+
+            <div class="plan-cta">
+              <div class="plan-cta-btn primary">✓ I'm in</div>
+              <div class="plan-cta-btn secondary">📍 Directions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg msg-in" style="margin-top: 6px;">
+          <span class="sender s1">Mia</span>
+          2 FOR 1 TACOS?? say no more 🌮🌮
+          <span class="time">2:31 PM</span>
+        </div>
+        <div class="msg msg-in">
+          <span class="sender s3">Jay</span>
+          my wallet is happy rn 🥹
+          <span class="time">2:31 PM</span>
+        </div>
+        <div class="msg msg-out">
+          <span class="sender">Bea (You)</span>
+          told you I got it handled 😌✨
+          <span class="time">2:32 PM</span>
+        </div>
+      </div>
+
+      <div class="wa-input-area">
+        <div class="wa-input-bar">
+          <span>😊</span>
+          <span style="flex:1; opacity:0.5;">Message</span>
+          <span>📎</span>
+        </div>
+        <div class="wa-send-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="prototype-label">
+    <span class="brand">GroupSync</span><br>
+    BTE 646 · Prototyping Activity · Clickable Walkthrough
+  </div>
+
+<script>
+  function goScreen(n) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen' + n).classList.add('active');
+    document.querySelectorAll('.nav-step').forEach((s, i) => {
+      s.classList.toggle('active', i === n - 1);
+    });
+  }
+</script>
+</body>
+</html>
